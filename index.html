@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modelado de Procesos y Herramientas CASE</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e27; --surface: #141834; --surface-2: #1e2447;
+    --primary: #6366f1; --secondary: #ec4899; --accent: #06b6d4;
+    --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+    --text: #f1f5f9; --text-muted: #94a3b8; --border: #2a2f52;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Space Grotesk', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+  
+  .bg-animated { position: fixed; inset: 0; z-index: -1;
+    background: radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.15), transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(236, 72, 153, 0.15), transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.1), transparent 70%);
+    animation: pulse 8s ease-in-out infinite alternate; }
+  @keyframes pulse { 0% { opacity: 0.6; transform: scale(1); } 100% { opacity: 1; transform: scale(1.1); } }
+
+  .hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 2rem; }
+  .hero h1 { font-size: clamp(2.5rem, 6vw, 5rem); font-weight: 700; background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 1rem; }
+  .hero p { font-size: clamp(1.1rem, 2vw, 1.5rem); color: var(--text-muted); margin-bottom: 2rem; }
+  .btn { padding: 1rem 2.5rem; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border: none; border-radius: 50px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3); }
+  .btn:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 15px 40px rgba(99, 102, 241, 0.5); }
+  section { padding: 5rem 2rem; max-width: 1200px; margin: 0 auto; }
+  h2 { font-size: clamp(1.8rem, 4vw, 2.8rem); margin-bottom: 2rem; text-align: center; }
+  h2 span { background: linear-gradient(135deg, var(--accent), var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+  .model-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; }
+  .model-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; transition: all 0.3s ease; }
+  .model-card:hover { transform: translateY(-5px); border-color: var(--primary); box-shadow: 0 15px 40px rgba(99, 102, 241, 0.2); }
+  .model-header { padding: 1.5rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: var(--surface-2); }
+  .model-header h3 { font-size: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
+  .model-header .icon { font-size: 2rem; }
+  .model-body { padding: 0 1.5rem; max-height: 0; overflow: hidden; transition: max-height 0.5s ease-out; }
+  .model-body.active { max-height: 1400px; padding: 1.5rem; }
+  .model-body p { margin-bottom: 1rem; color: var(--text-muted); }
+  .model-body ul { list-style: none; padding-left: 0; }
+  .model-body li { padding: 0.5rem 0; padding-left: 1.5rem; position: relative; }
+  .model-body li::before { content: "→"; position: absolute; left: 0; color: var(--primary); }
+
+  .diagram-container { margin: 1rem 0; padding: 1rem; background: var(--bg); border-radius: 10px; }
+
+  .roadmap { display: flex; flex-direction: column; gap: 2rem; position: relative; }
+  .roadmap::before { content: ''; position: absolute; left: 30px; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, var(--primary), var(--secondary)); border-radius: 2px; }
+  .roadmap-step { display: flex; gap: 2rem; position: relative; }
+  .step-number { width: 60px; height: 60px; border-radius: 50%; background: var(--surface-2); border: 4px solid var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; flex-shrink: 0; z-index: 1; }
+  .step-content { background: var(--surface); border: 1px solid var(--border); border-radius: 15px; padding: 1.5rem; flex-grow: 1; }
+  .step-content h4 { color: var(--accent); margin-bottom: 0.5rem; font-size: 1.3rem; }
+  .step-content p, .step-content ul { color: var(--text-muted); margin-bottom: 1rem; }
+  .step-content ul { padding-left: 1.5rem; }
+  .step-content li { margin-bottom: 0.5rem; }
+  .tool-badge { display: inline-block; padding: 0.3rem 0.8rem; background: var(--primary); border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-right: 0.5rem; margin-top: 0.5rem; }
+  .tool-badge.drawio { background: #F08705; } .tool-badge.uizard { background: #7C3AED; }
+
+  .notation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
+  .notation-card { background: var(--surface-2); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--primary); }
+  .notation-card h4 { color: var(--primary); margin-bottom: 0.5rem; }
+  .notation-card p { font-size: 0.95rem; color: var(--text-muted); }
+
+  .nota-proxima { background: rgba(6, 182, 212, 0.1); border-left: 4px solid var(--accent); padding: 1rem 1.5rem; border-radius: 10px; margin: 2rem auto; max-width: 800px; font-size: 1rem; }
+
+  .chart-container { background: var(--surface); border-radius: 20px; padding: 2rem; border: 1px solid var(--border); max-width: 700px; margin: 0 auto; }
+  footer { text-align: center; padding: 3rem 2rem; color: var(--text-muted); border-top: 1px solid var(--border); margin-top: 4rem; }
+</style>
+</head>
+<body>
+<div class="bg-animated"></div>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>Modelado de Procesos</h1>
+  <p>Diagramas, herramientas CASE y el arte de comunicar sistemas 🎨</p>
+  <button class="btn" onclick="document.getElementById('teoria').scrollIntoView({behavior:'smooth'})">Comenzar</button>
+</div>
+
+<!-- TEORÍA: ¿POR QUÉ MODELAR? -->
+<section id="teoria">
+  <h2>¿Por qué <span>modelar</span> procesos?</h2>
+  <div class="notation-grid">
+    <div class="notation-card">
+      <h4>🧠 Claridad</h4>
+      <p>Un buen diagrama comunica un proceso complejo en segundos. Mucho mejor que 10 páginas de texto.</p>
+    </div>
+    <div class="notation-card">
+      <h4>🔍 Análisis</h4>
+      <p>Permite identificar cuellos de botella, pasos redundantes y oportunidades de mejora.</p>
+    </div>
+    <div class="notation-card">
+      <h4>📚 Documentación</h4>
+      <p>Sirve como referencia para el equipo de desarrollo y para futuras mantenciones.</p>
+    </div>
+    <div class="notation-card">
+      <h4>🗣️ Comunicación</h4>
+      <p>Es un lenguaje común entre usuarios, analistas y desarrolladores. Todos ven lo mismo.</p>
+    </div>
+  </div>
+</section>
+
+<!-- TIPOS DE DIAGRAMAS -->
+<section>
+  <h2>Tipos de <span>diagramas</span></h2>
+  <div class="model-grid">
+    <!-- Diagrama de flujo -->
+    <div class="model-card">
+      <div class="model-header" onclick="toggleModel(this)">
+        <h3>📊 Diagrama de Flujo</h3>
+        <span class="icon">▼</span>
+      </div>
+      <div class="model-body">
+        <p>El más básico y universal. Representa un proceso como una secuencia de pasos, decisiones y resultados.</p>
+        <div class="diagram-container">
+          <div style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
+            <div style="padding: 6px 16px; background: var(--accent); border-radius: 20px; font-size: 0.85rem;">🔵 Inicio</div>
+            <div style="font-size: 1.2rem;">↓</div>
+            <div style="padding: 6px 16px; background: var(--surface-2); border-radius: 8px; font-size: 0.85rem;">📋 Recibir solicitud</div>
+            <div style="font-size: 1.2rem;">↓</div>
+            <div style="padding: 6px 16px; background: var(--warning); border-radius: 8px; font-size: 0.85rem; color:#000;">🔶 ¿Datos completos?</div>
+            <div style="display: flex; gap: 2rem; font-size: 0.85rem;">
+              <span>⬅️ No → Solicitar</span>
+              <span>Sí ⬇️</span>
+            </div>
+            <div style="padding: 6px 16px; background: var(--success); border-radius: 20px; font-size: 0.85rem;">🟢 Fin</div>
+          </div>
+        </div>
+        <ul>
+          <li><strong>Símbolos:</strong> Óvalo (inicio/fin), rectángulo (proceso), rombo (decisión), flecha (flujo).</li>
+          <li><strong>Uso:</strong> Procesos simples, algoritmos, flujos de trabajo.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- DFD -->
+    <div class="model-card">
+      <div class="model-header" onclick="toggleModel(this)">
+        <h3>🔄 DFD (Diagrama de Flujo de Datos)</h3>
+        <span class="icon">▼</span>
+      </div>
+      <div class="model-body">
+        <p>Muestra cómo se mueven los datos a través de un sistema: entradas, procesos, almacenes y salidas.</p>
+        <div class="diagram-container">
+          <div style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
+            <div style="padding: 6px 16px; background: var(--accent); border-radius: 8px; font-size: 0.85rem;">👤 Usuario</div>
+            <div style="font-size: 1.2rem;">↓</div>
+            <div style="padding: 6px 16px; background: var(--surface-2); border-radius: 8px; font-size: 0.85rem;">⚙️ Proceso: Validar pedido</div>
+            <div style="font-size: 1.2rem;">↓</div>
+            <div style="padding: 6px 16px; background: var(--surface-2); border-radius: 8px; font-size: 0.85rem;">💾 Almacén: Base de datos</div>
+          </div>
+        </div>
+        <ul>
+          <li><strong>Símbolos:</strong> Entidad externa (rectángulo), proceso (círculo/óvalo), almacén (rectángulo abierto), flujo (flecha).</li>
+          <li><strong>Uso:</strong> Sistemas de información, análisis estructurado (Kendall & Kendall).</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- UML Actividades -->
+    <div class="model-card">
+      <div class="model-header" onclick="toggleModel(this)">
+        <h3>🎯 UML - Diagrama de Actividades</h3>
+        <span class="icon">▼</span>
+      </div>
+      <div class="model-body">
+        <p>Similar al diagrama de flujo pero con notación UML estándar. Incluye swimlanes (carriles) para mostrar responsabilidades.</p>
+        <div class="diagram-container">
+          <div style="display: flex; gap: 10px; justify-content: center;">
+            <div style="flex: 1; background: var(--surface-2); padding: 8px; border-radius: 6px; text-align: center; font-size: 0.8rem;">
+              <strong>👤 Usuario</strong><br>→ Solicitar turno
+            </div>
+            <div style="flex: 1; background: var(--surface-2); padding: 8px; border-radius: 6px; text-align: center; font-size: 0.8rem;">
+              <strong>⚙️ Sistema</strong><br>→ Validar disponibilidad
+            </div>
+            <div style="flex: 1; background: var(--surface-2); padding: 8px; border-radius: 6px; text-align: center; font-size: 0.8rem;">
+              <strong>👨‍⚕️ Médico</strong><br>→ Confirmar turno
+            </div>
+          </div>
+        </div>
+        <ul>
+          <li><strong>Ventaja:</strong> Muestra quién hace qué (swimlanes).</li>
+          <li><strong>Uso:</strong> Modelado de casos de uso, flujos complejos con múltiples actores.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- BPMN -->
+    <div class="model-card">
+      <div class="model-header" onclick="toggleModel(this)">
+        <h3>📋 BPMN</h3>
+        <span class="icon">▼</span>
+      </div>
+      <div class="model-body">
+        <p>Business Process Model and Notation. Estándar para modelar procesos de negocio con notación rigurosa.</p>
+        <div class="diagram-container">
+          <div style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
+            <div style="width: 24px; height: 24px; border: 2px solid var(--accent); border-radius: 50%;"></div>
+            <div style="font-size: 1.2rem;">↓</div>
+            <div style="padding: 6px 16px; background: var(--surface-2); border-radius: 20px; font-size: 0.85rem;">📝 Recibir pedido</div>
+            <div style="font-size: 1.2rem;">↓</div>
+            <div style="width: 24px; height: 24px; background: var(--surface-2); border: 2px solid var(--warning); transform: rotate(45deg);"></div>
+            <div style="font-size: 1.2rem;">↓</div>
+            <div style="width: 24px; height: 24px; background: var(--success); border-radius: 50%;"></div>
+          </div>
+        </div>
+        <ul>
+          <li><strong>Símbolos:</strong> Eventos (círculos), actividades (rectángulos redondeados), puertas de enlace (rombos).</li>
+          <li><strong>Uso:</strong> Procesos de negocio, integración TI-negocio.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARATIVA DE NOTACIONES -->
+<section>
+  <h2>¿Cuál <span>usar</span>?</h2>
+  <div class="notation-grid">
+    <div class="notation-card" style="border-left-color: var(--accent);">
+      <h4>📊 Diagrama de Flujo</h4>
+      <p>Cuando el proceso es simple y el público no es técnico. Es el más fácil de entender.</p>
+    </div>
+    <div class="notation-card" style="border-left-color: var(--success);">
+      <h4>🔄 DFD</h4>
+      <p>Cuando necesitás mostrar cómo viajan los datos en un sistema de información. Clásico del análisis estructurado.</p>
+    </div>
+    <div class="notation-card" style="border-left-color: var(--warning);">
+      <h4>🎯 UML Actividades</h4>
+      <p>Cuando hay múltiples actores y necesitás mostrar responsabilidades con swimlanes.</p>
+    </div>
+    <div class="notation-card" style="border-left-color: var(--secondary);">
+      <h4>📋 BPMN</h4>
+      <p>Cuando el proceso es de negocio y necesitás un estándar riguroso para documentación formal.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HERRAMIENTAS CASE -->
+<section>
+  <h2>Herramientas <span>CASE</span></h2>
+  <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem; max-width: 700px; margin-left: auto; margin-right: auto;">
+    Las herramientas CASE (Computer-Aided Software Engineering) son programas que asisten en las actividades de ingeniería de software. Su objetivo es automatizar tareas, mejorar la productividad y asegurar consistencia.
+  </p>
+  <div class="notation-grid">
+    <div class="notation-card" style="border-left-color: #F08705;">
+      <h4>🎨 draw.io</h4>
+      <p>Gratuita, web, sin instalación. Ideal para diagramas de flujo, UML, DFD y más. <strong>La usaremos hoy.</strong></p>
+    </div>
+    <div class="notation-card" style="border-left-color: #7C3AED;">
+      <h4>🤖 Mermaid + IA</h4>
+      <p>Genera diagramas a partir de texto. Combinado con IA, podés describir un proceso y obtener el diagrama listo.</p>
+    </div>
+    <div class="notation-card" style="border-left-color: #0052CC;">
+      <h4>📋 Jira</h4>
+      <p>Para gestión de proyectos. Ya lo usaron en la clase anterior.</p>
+    </div>
+    <div class="notation-card" style="border-left-color: #F24E1E;">
+      <h4>🎨 Figma / Uizard</h4>
+      <p>Para prototipos de interfaz. Ya lo usaron en la clase anterior.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SECCIÓN DE DESAFÍO PRÁCTICO -->
+<section id="desafio">
+  <h2>Desafío: <span>Modelado de Procesos</span></h2>
+  <p style="text-align: center; color: var(--text-muted); margin-bottom: 1rem; font-size: 1.2rem;"><strong>Trabajen en tríos o pares.</strong> Elijan uno de los escenarios de la clase anterior y modelen su proceso.</p>
+
+  <div class="nota-proxima">
+    <strong>📌 Importante:</strong> Vamos a usar <strong>draw.io</strong> para crear los diagramas. Es gratuita, no requiere instalación y funciona en el navegador. También pueden usar <strong>Mermaid</strong> con IA si prefieren generar el diagrama a partir de texto.
+  </div>
+
+  <!-- Escenarios -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
+    <div style="background: var(--surface-2); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent);">
+      <h4 style="color: var(--accent); margin-bottom: 0.5rem;">🏥 Sistema de Turnos Médicos</h4>
+      <p style="font-size: 0.95rem; color: var(--text-muted);">Modelen el proceso completo: desde que el paciente solicita un turno hasta que el médico lo confirma.</p>
+    </div>
+    <div style="background: var(--surface-2); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--success);">
+      <h4 style="color: var(--success); margin-bottom: 0.5rem;">🚚 App de Delivery "Ya Llego"</h4>
+      <p style="font-size: 0.95rem; color: var(--text-muted);">Modelen el flujo de un pedido: desde que el cliente ordena hasta que el repartidor entrega.</p>
+    </div>
+    <div style="background: var(--surface-2); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--warning);">
+      <h4 style="color: var(--warning); margin-bottom: 0.5rem;">📦 Sistema de Inventario "StockSeguro"</h4>
+      <p style="font-size: 0.95rem; color: var(--text-muted);">Modelen el proceso de actualización de stock: desde que llega mercadería hasta que se registra en el sistema.</p>
+    </div>
+  </div>
+
+  <div class="roadmap">
+    <!-- Paso 1 -->
+    <div class="roadmap-step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <h4>Identificar el Proceso a Modelar (10 min)</h4>
+        <p>Elijan uno de los escenarios y definan <strong>qué proceso van a modelar</strong>. Escriban en una hoja o documento:</p>
+        <ul>
+          <li>Nombre del proceso.</li>
+          <li>¿Dónde empieza? (evento de inicio)</li>
+          <li>¿Dónde termina? (evento de fin)</li>
+          <li>¿Qué actores participan?</li>
+        </ul>
+        <span class="tool-badge">Análisis</span>
+      </div>
+    </div>
+
+    <!-- Paso 2 -->
+    <div class="roadmap-step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <h4>Elegir el Tipo de Diagrama (5 min)</h4>
+        <p>Según el proceso elegido, decidan qué notación usar:</p>
+        <ul>
+          <li><strong>Diagrama de Flujo:</strong> Si es un proceso simple, lineal, con pocas decisiones.</li>
+          <li><strong>DFD:</strong> Si quieren mostrar cómo viajan los datos (entradas, procesos, almacenes, salidas).</li>
+          <li><strong>UML Actividades:</strong> Si hay múltiples actores con responsabilidades claras (usar swimlanes).</li>
+        </ul>
+        <span class="tool-badge">Decisión</span>
+        <span class="tool-badge">Justificación</span>
+      </div>
+    </div>
+
+    <!-- Paso 3 -->
+    <div class="roadmap-step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <h4>Crear el Diagrama en draw.io (20 min)</h4>
+        <p>Abran <a href="https://app.diagrams.net" target="_blank" style="color: var(--accent);">app.diagrams.net</a> y sigan estos pasos:</p>
+        <span class="tool-badge drawio">draw.io</span>
+        <div style="margin-top: 1rem; padding: 1rem; background: var(--bg); border-radius: 8px; font-size: 0.9rem;">
+          <strong>📋 Instrucciones APB:</strong>
+          <ol style="padding-left: 1.5rem; margin-top: 0.5rem;">
+            <li>Hagan clic en <strong>"Crear nuevo diagrama"</strong> → <strong>"Blank Diagram"</strong>.</li>
+            <li>En el panel izquierdo, busquen las formas. Para <strong>Diagrama de Flujo</strong>: usen óvalos (inicio/fin), rectángulos (procesos), rombos (decisiones) y flechas.</li>
+            <li>Para <strong>DFD</strong>: usen rectángulos (entidades), círculos (procesos), rectángulos abiertos (almacenes) y flechas.</li>
+            <li>Para <strong>UML Actividades</strong>: usen los swimlanes (carriles) para separar actores. Arrastren el swimlane y ajusten el número de carriles.</li>
+            <li><strong>Mínimo 5 elementos, máximo 12.</strong> No busquen la perfección, busquen comunicar el proceso.</li>
+            <li>Exporten como <strong>PNG</strong> (Archivo → Exportar como → PNG) y guárdenlo.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paso 4 -->
+    <div class="roadmap-step">
+      <div class="step-number">4</div>
+      <div class="step-content">
+        <h4>Alternativa: Generar con IA (10 min)</h4>
+        <p>Si prefieren una opción más rápida, usen <strong>Mermaid</strong> con IA. Pueden pegar este prompt en cualquier chatbot:</p>
+        <span class="tool-badge uizard">Mermaid + IA</span>
+        <div style="margin-top: 1rem; padding: 1rem; background: var(--bg); border-radius: 8px; font-size: 0.9rem;">
+          <strong>Prompt para IA (copiar y pegar):</strong><br>
+          "Genera un diagrama de flujo en formato Mermaid para el proceso de <strong>[PROCESO]</strong>. El diagrama debe mostrar: inicio, los pasos principales, las decisiones, y el fin. Usa la sintaxis Mermaid estándar."
+          <br><br>
+          <strong>Luego:</strong> Copien el código Mermaid generado y péguenlo en <a href="https://mermaid.live" target="_blank" style="color: var(--accent);">mermaid.live</a> para ver el diagrama. Exporten como PNG.
+        </div>
+      </div>
+    </div>
+
+    <!-- Paso 5 -->
+    <div class="roadmap-step">
+      <div class="step-number">5</div>
+      <div class="step-content">
+        <h4>Presentación y Justificación (10 min)</h4>
+        <p>Cada trío tendrá <strong>3 minutos</strong> para presentar:</p>
+        <ul>
+          <li>El proceso que modelaron.</li>
+          <li>La notación elegida y por qué.</li>
+          <li>El diagrama final (mostrar en pantalla).</li>
+          <li>Una reflexión: ¿Qué aprendieron al modelar el proceso? ¿Qué harían diferente?</li>
+        </ul>
+        <span class="tool-badge">Presentación Oral</span>
+        <span class="tool-badge">Defensa</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONEXIÓN CON PRÓXIMA CLASE -->
+<section>
+  <h2>Lo que viene <span>después</span></h2>
+  <div class="notation-grid">
+    <div class="notation-card" style="border-left-color: var(--primary);">
+      <h4>🧩 Patrones de proceso</h4>
+      <p>Soluciones recurrentes que se pueden reutilizar en distintos proyectos.</p>
+    </div>
+    <div class="notation-card" style="border-left-color: var(--accent);">
+      <h4>🏗️ Arquitectura y diseño</h4>
+      <p>Cómo estructurar el software para que sea mantenible y escalable.</p>
+    </div>
+    <div class="notation-card" style="border-left-color: var(--success);">
+      <h4>📊 Herramientas CASE avanzadas</h4>
+      <p>Integración de diagramas con generación de código y documentación.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>Ingeniería de Requerimientos I — Eje Temático N.° 2 — Semana 6</p>
+  <p style="font-size: 0.8rem; margin-top: 0.5rem;">Modelado de procesos, patrones, arquitectura y herramientas CASE.</p>
+</footer>
+
+<script>
+  function toggleModel(header) {
+    const body = header.nextElementSibling;
+    const icon = header.querySelector('.icon');
+    body.classList.toggle('active');
+    if (body.classList.contains('active')) {
+      icon.textContent = '▲';
+    } else {
+      icon.textContent = '▼';
+    }
+  }
+</script>
+
+</body>
+</html>
