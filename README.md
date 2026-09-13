@@ -50,11 +50,3 @@ Este proyecto es una guía didáctica e interactiva diseñada para clases de **I
 
 ---
 
-## 🚀 Instalación y Ejecución
-
-Al ser un proyecto web estático puro, puedes ejecutarlo en segundos:
-
-### Opción 1: Abrir localmente
-1. Clona este repositorio o descarga el código:
-   ```bash
-   git clone [https://github.com/tu-usuario/modelado-procesos-case.git](https://github.com/tu-usuario/modelado-procesos-case.git)
